@@ -1,0 +1,18 @@
+import Redis from 'ioredis';
+import { env } from '@/lib/env';
+
+const globalForRedis = globalThis as unknown as {
+  redis: Redis | undefined;
+};
+
+export const redis =
+  globalForRedis.redis ??
+  new Redis(env.REDIS_URL, {
+    lazyConnect: true,
+  });
+
+redis.on('error', (error) => {
+  console.error('Redis connection error', error);
+});
+
+if (env.NODE_ENV !== 'production') globalForRedis.redis = redis;

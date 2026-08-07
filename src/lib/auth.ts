@@ -31,7 +31,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = credentials?.password as string | undefined;
         if (!email || !password) throw new InvalidLoginError();
 
-        const allowed = await rateLimit(`login:${email}`, 5, 60);
+        const allowed = await rateLimit(`login:${email}`, 3, 60);
         if (!allowed) throw new RateLimitedError();
 
         const user = await prisma.user.findUnique({ where: { email } });

@@ -58,11 +58,19 @@ Convención de estado: `[ ]` pendiente · `[~]` en progreso · `[x]` listo
 - [x] `SignOutButton` compartido — probado en navegador: cierra sesión y `/admin` vuelve a bloquear
 - Nota: son shells vacíos ("Todavía no hay nada acá") — contenido real de cada dashboard es trabajo futuro fuera de este plan (catálogo, pedidos, entregas, etc. — ver Backlog)
 
-## Fase 3 — Verificación de email (evaluar si va en MVP o después)
+## Fase 3 — Verificación de email — completo (2026-08-07)
 
-- [ ] Token de verificación (modelo `VerificationToken` ya existe en el schema, es de Auth.js)
-- [ ] Flujo de verificación obligatoria antes de loguear
-- Nota: depende de tener un email service (ver Backlog — Resend no está integrado aún). Si se quiere esto en MVP, hay que traer esa dependencia antes.
+- [x] Resend integrado — `src/lib/email.ts` (cliente + `sendVerificationEmail`), env vars `RESEND_API_KEY`/`EMAIL_FROM`
+- [x] Token de verificación — `src/lib/verification-token.ts` (`issueVerificationEmail`), usa el `VerificationToken` que ya existía en el schema (Auth.js), TTL 24h, invalida tokens previos del mismo email
+- [x] `/verify-email` — valida token, setea `emailVerified`, borra el token (uso único)
+- [x] Login bloqueado hasta verificar: `EmailNotVerifiedError` en `authorize()` (`auth.ts`)
+- [x] Registro ya no auto-loguea (siempre falla por no-verificado) — muestra mensaje "revisá tu email" en vez de forzar signIn
+- [x] Reenvío de verificación desde `/login` (`resendVerificationAction`) — mismo mensaje exista o no la cuenta, para no filtrar qué emails están registrados
+- [x] Fallos de envío no bloquean el registro/reenvío (cuenta ya creada, se puede reenviar después) — se reportan a Sentry vía `Sentry.captureException`, no rompen la UX
+- [x] Scripts de seed (`create-admin`, `seed-test-users`) actualizados para marcar `emailVerified` — si no, quedaban sin poder loguear con el nuevo bloqueo
+- Bug encontrado y corregido en el camino: el SDK de Resend devuelve `{data, error}` en vez de tirar excepción — sin chequear `error` explícitamente, un envío fallido se veía idéntico a uno exitoso (fallaba en silencio)
+- Probado en navegador end-to-end: registro → login bloqueado → reenvío → `/verify-email` con token real → login exitoso → usuarios sembrados (ya verificados) sin regresión
+- Costo real en producción (Resend): plan Free cubre 3,000 emails/mes (tope 100/día) — alcanza sobrado solo para verificación. Si más adelante se suman notificaciones de pedidos, ahí sí escala a Pro ($20/mes, 50k emails)
 
 ---
 

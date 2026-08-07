@@ -26,6 +26,7 @@
     "@base-ui/react": "^1.7.0",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "@sentry/nextjs": "^10.69.0",
     "@t3-oss/env-nextjs": "^0.13.11",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",

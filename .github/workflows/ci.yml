@@ -10,6 +10,7 @@ env:
   REDIS_URL: 'redis://localhost:6379'
   NEXTAUTH_SECRET: 'ci-placeholder-secret'
   NEXTAUTH_URL: 'http://localhost:3000'
+  NEXT_PUBLIC_SENTRY_DSN: 'https://5aa618c36b3318731d931dd13d1415c5@o4511870380736513.ingest.us.sentry.io/4511870386896896'
 
 jobs:
   ci:

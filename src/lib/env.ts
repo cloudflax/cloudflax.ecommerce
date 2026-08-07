@@ -9,6 +9,10 @@ export const env = createEnv({
     NEXTAUTH_SECRET: z.string().min(1),
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   },
-  client: {},
-  experimental__runtimeEnv: {},
+  client: {
+    NEXT_PUBLIC_SENTRY_DSN: z.url(),
+  },
+  experimental__runtimeEnv: {
+    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  },
 });

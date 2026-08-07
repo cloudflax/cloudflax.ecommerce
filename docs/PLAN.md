@@ -49,11 +49,14 @@ Convención de estado: `[ ]` pendiente · `[~]` en progreso · `[x]` listo
 - Probado en navegador: sin sesión → login con callbackUrl; login admin → `/admin`; admin en `/account` → rebota a `/admin`; cliente en `/admin` → rebota a `/account`
 - Nota: `/admin`, `/account`, `/delivery` siguen dando 404 — son shells vacíos, eso es Fase 2
 
-## Fase 2 — Shells de dashboard (paralelizable, depende de Fase 1 Track C)
+## Fase 2 — Shells de dashboard — completo (2026-08-07)
 
-- [ ] `/admin` — layout + nav, guard `ADMIN` + `STAFF` (sin contenido real todavía, solo shell protegido)
-- [ ] `/account` — layout + nav, guard `CUSTOMER`
-- [ ] `/delivery` — layout + nav, guard `DELIVERY`
+- [x] `/admin` — layout + nav, guard `ADMIN` + `STAFF`
+- [x] `/account` — layout + nav, guard `CUSTOMER`
+- [x] `/delivery` — layout + nav, guard `DELIVERY`
+- [x] `requireRole()` en `auth.ts` — cada layout vuelve a chequear sesión/rol server-side (no confía solo en `proxy.ts`; los docs de Next 16 lo piden explícitamente)
+- [x] `SignOutButton` compartido — probado en navegador: cierra sesión y `/admin` vuelve a bloquear
+- Nota: son shells vacíos ("Todavía no hay nada acá") — contenido real de cada dashboard es trabajo futuro fuera de este plan (catálogo, pedidos, entregas, etc. — ver Backlog)
 
 ## Fase 3 — Verificación de email (evaluar si va en MVP o después)
 

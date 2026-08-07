@@ -39,10 +39,15 @@ Convención de estado: `[ ]` pendiente · `[~]` en progreso · `[x]` listo
 - Probado en navegador: credenciales inválidas, rate-limit al 6to intento, login válido (admin) redirige a `/`
 - Nota: redirect post-login es fijo a `/` por ahora — el redirect según `role` es tarea de Track C, no se adelantó acá
 
-### Track C: Protección de rutas
+### Track C: Protección de rutas — completo (2026-08-07)
 
-- [ ] Middleware: bloquear `/admin`, `/account`, `/delivery` sin sesión
-- [ ] Redirect post-login según `role` (`ADMIN`/`STAFF` → `/admin`, `DELIVERY` → `/delivery`, `CUSTOMER` → `/account`)
+- [x] `src/proxy.ts` — bloquea `/admin`, `/account`, `/delivery` sin sesión, redirige a `/login?callbackUrl=...` (esta versión de Next.js renombró `middleware.ts` a `proxy.ts`/`export const proxy`, no `middleware`)
+- [x] `role` propagado al JWT/session vía callbacks en `auth.ts` (`session.user.role`), con módulo de tipos `src/types/next-auth.d.ts` para `Session`/`User`
+- [x] Redirect post-login según `role` (`ROLE_HOME` en `auth.ts`, reusado por `proxy.ts` y `login/actions.ts`) — respeta `callbackUrl` si es una ruta interna segura, si no cae al home del rol
+- [x] Bloqueo cruzado entre roles: si un rol entra a un área que no es la suya, rebota a su propio home (no 403 genérico)
+- [x] Edge case: sesión con JWT sin `role` (emitida antes de este cambio) se trata como no-autenticada en vez de romper con una URL inválida
+- Probado en navegador: sin sesión → login con callbackUrl; login admin → `/admin`; admin en `/account` → rebota a `/admin`; cliente en `/admin` → rebota a `/account`
+- Nota: `/admin`, `/account`, `/delivery` siguen dando 404 — son shells vacíos, eso es Fase 2
 
 ## Fase 2 — Shells de dashboard (paralelizable, depende de Fase 1 Track C)
 

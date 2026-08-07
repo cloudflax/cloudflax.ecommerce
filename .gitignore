@@ -49,3 +49,6 @@ next-env.d.ts
 
 # pnpm local content-addressable store (sandbox/dev env, not portable)
 /.pnpm-store
+
+*storybook.log
+storybook-static

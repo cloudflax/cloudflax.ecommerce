@@ -1,6 +1,8 @@
 allowBuilds:
   '@prisma/engines': true
   '@sentry/cli': true
+  core-js-pure: true
+  esbuild: true
   prisma: true
   sharp: false
   unrs-resolver: false

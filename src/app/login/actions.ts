@@ -1,8 +1,14 @@
 'use server';
 
+import { redirect } from 'next/navigation';
 import { AuthError } from 'next-auth';
-import { signIn, InvalidLoginError, RateLimitedError } from '@/lib/auth';
+import { signIn, InvalidLoginError, RateLimitedError, ROLE_HOME } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import { loginSchema } from './schema';
+
+function isSafeRedirect(url: string | null): url is string {
+  return !!url && url.startsWith('/') && !url.startsWith('//');
+}
 
 export type LoginState = {
   error?: string;
@@ -27,7 +33,7 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
   const { email, password } = parsed.data;
 
   try {
-    await signIn('credentials', { email, password, redirectTo: '/' });
+    await signIn('credentials', { email, password, redirect: false });
   } catch (error) {
     if (error instanceof RateLimitedError) {
       return { error: 'Demasiados intentos. Esperá un minuto antes de volver a intentar.' };
@@ -41,5 +47,9 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
     throw error;
   }
 
-  return {};
+  const callbackUrl = formData.get('callbackUrl') as string | null;
+  if (isSafeRedirect(callbackUrl)) redirect(callbackUrl);
+
+  const user = await prisma.user.findUnique({ where: { email }, select: { role: true } });
+  redirect(ROLE_HOME[user!.role]);
 }

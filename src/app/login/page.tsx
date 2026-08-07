@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { use, useActionState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,12 @@ import { loginAction, type LoginState } from './actions';
 
 const initialState: LoginState = {};
 
-export default function LoginPage() {
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
+  const { callbackUrl } = use(searchParams);
   const [state, formAction, pending] = useActionState(loginAction, initialState);
 
   return (
@@ -25,6 +30,7 @@ export default function LoginPage() {
       </div>
 
       <form action={formAction} className="space-y-4">
+        {callbackUrl && <input type="hidden" name="callbackUrl" value={callbackUrl} />}
         {state.error && <p className="text-destructive text-sm">{state.error}</p>}
 
         <div className="space-y-2">

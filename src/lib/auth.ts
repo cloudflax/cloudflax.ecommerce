@@ -1,6 +1,7 @@
 import NextAuth, { CredentialsSignin } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
+import { redirect } from 'next/navigation';
 import type { Role } from '@/generated/prisma/enums';
 import bcrypt from 'bcryptjs';
 import { env } from '@/lib/env';
@@ -66,3 +67,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
 });
+
+// Defense in depth alongside src/proxy.ts: layouts call this directly since
+// Next's own docs warn against relying on Proxy alone for authorization
+// (a matcher change or refactor can silently drop coverage).
+export async function requireRole(...roles: Role[]) {
+  const session = await auth();
+  if (!session?.user || !roles.includes(session.user.role)) {
+    redirect('/login');
+  }
+  return session;
+}

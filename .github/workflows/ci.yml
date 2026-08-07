@@ -40,6 +40,10 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      # e2e (pnpm test:e2e) intentionally not run here yet: the only spec
+      # checks that the home page loads. Wire it in once there are real
+      # flow specs (login, checkout) worth the browser-install + run time.
+
       - name: Cache Next.js build
         uses: actions/cache@v4
         with:

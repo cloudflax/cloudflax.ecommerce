@@ -3,11 +3,14 @@ import bcrypt from 'bcryptjs';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@/generated/prisma/client';
 import { env } from '@/lib/env';
+import { requireDevEnv } from './require-dev-env';
 
 const ADMIN_EMAIL = 'jose.guerrero@cloudflax.com';
 const ADMIN_PASSWORD = 'password';
 
 async function main() {
+  requireDevEnv();
+
   const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
   const prisma = new PrismaClient({ adapter });
 

@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@/generated/prisma/client';
 import { env } from '@/lib/env';
+import { requireDevEnv } from './require-dev-env';
 
 const TEST_PASSWORD = 'password';
 
@@ -12,6 +13,8 @@ const TEST_USERS = [
 ];
 
 async function main() {
+  requireDevEnv();
+
   const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
   const prisma = new PrismaClient({ adapter });
 

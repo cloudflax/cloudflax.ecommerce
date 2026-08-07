@@ -11,6 +11,12 @@ const eslintConfig = defineConfig([
   ...nextTs,
   // Plugin is already registered by eslint-config-next; only add its extra rules.
   { rules: jsxA11y.flatConfigs.recommended.rules },
+  // shadcn primitives forward htmlFor/props via spread from call sites, which
+  // this rule can't trace statically — the actual usages are still linted.
+  {
+    files: ['src/components/ui/**/*.tsx'],
+    rules: { 'jsx-a11y/label-has-associated-control': 'off' },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

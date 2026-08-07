@@ -1,13 +1,14 @@
 'use server';
 
-import { AuthError } from 'next-auth';
+import * as Sentry from '@sentry/nextjs';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
-import { signIn } from '@/lib/auth';
+import { issueVerificationEmail } from '@/lib/verification-token';
 import { registerSchema } from './schema';
 
 export type RegisterState = {
   error?: string;
+  success?: string;
   fieldErrors?: Partial<
     Record<'name' | 'email' | 'phone' | 'password' | 'confirmPassword' | 'terms', string>
   >;
@@ -55,15 +56,12 @@ export async function registerAction(
   });
 
   try {
-    await signIn('credentials', { email, password, redirectTo: '/account' });
+    await issueVerificationEmail(email);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return {
-        error: 'Cuenta creada. No se pudo iniciar sesión automáticamente, ingresá manualmente.',
-      };
-    }
-    throw error;
+    // The account is already created and usable via "reenviar" later — a
+    // delivery failure shouldn't block registration, but ops needs to know.
+    Sentry.captureException(error);
   }
 
-  return {};
+  return { success: 'Cuenta creada. Revisá tu email para verificarla antes de iniciar sesión.' };
 }

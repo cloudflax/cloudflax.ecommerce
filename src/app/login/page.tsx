@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { loginAction, type LoginState } from './actions';
+import { loginAction, resendVerificationAction, type LoginState } from './actions';
 
 const initialState: LoginState = {};
 
@@ -16,6 +16,10 @@ export default function LoginPage({
 }) {
   const { callbackUrl } = use(searchParams);
   const [state, formAction, pending] = useActionState(loginAction, initialState);
+  const [resendState, resendAction, resendPending] = useActionState(
+    resendVerificationAction,
+    initialState,
+  );
 
   return (
     <div className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 px-4">
@@ -59,6 +63,18 @@ export default function LoginPage({
           {pending ? 'Ingresando...' : 'Ingresar'}
         </Button>
       </form>
+
+      {state.unverifiedEmail && !resendState.info && (
+        <form action={resendAction} className="text-center">
+          <input type="hidden" name="email" value={state.unverifiedEmail} />
+          <Button type="submit" variant="link" disabled={resendPending}>
+            {resendPending ? 'Reenviando...' : 'Reenviar email de verificación'}
+          </Button>
+        </form>
+      )}
+      {resendState.info && (
+        <p className="text-muted-foreground text-center text-sm">{resendState.info}</p>
+      )}
     </div>
   );
 }

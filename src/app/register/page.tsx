@@ -25,77 +25,81 @@ export default function RegisterPage() {
         </p>
       </div>
 
-      <form action={formAction} className="space-y-4">
-        {state.error && <p className="text-destructive text-sm">{state.error}</p>}
+      {state.success ? (
+        <p className="text-center text-sm">{state.success}</p>
+      ) : (
+        <form action={formAction} className="space-y-4">
+          {state.error && <p className="text-destructive text-sm">{state.error}</p>}
 
-        <div className="space-y-2">
-          <Label htmlFor="name">Nombre</Label>
-          <Input id="name" name="name" autoComplete="name" required />
-          {state.fieldErrors?.name && (
-            <p className="text-destructive text-sm">{state.fieldErrors.name}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" autoComplete="email" required />
-          {state.fieldErrors?.email && (
-            <p className="text-destructive text-sm">{state.fieldErrors.email}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="phone">Teléfono</Label>
-          <Input id="phone" name="phone" type="tel" autoComplete="tel" required />
-          {state.fieldErrors?.phone && (
-            <p className="text-destructive text-sm">{state.fieldErrors.phone}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="password">Contraseña</Label>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            required
-          />
-          {state.fieldErrors?.password && (
-            <p className="text-destructive text-sm">{state.fieldErrors.password}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
-          <Input
-            id="confirmPassword"
-            name="confirmPassword"
-            type="password"
-            autoComplete="new-password"
-            required
-          />
-          {state.fieldErrors?.confirmPassword && (
-            <p className="text-destructive text-sm">{state.fieldErrors.confirmPassword}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Checkbox id="terms" name="terms" required />
-            <Label htmlFor="terms" className="font-normal">
-              Acepto los términos y condiciones
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="name">Nombre</Label>
+            <Input id="name" name="name" autoComplete="name" required />
+            {state.fieldErrors?.name && (
+              <p className="text-destructive text-sm">{state.fieldErrors.name}</p>
+            )}
           </div>
-          {state.fieldErrors?.terms && (
-            <p className="text-destructive text-sm">{state.fieldErrors.terms}</p>
-          )}
-        </div>
 
-        <Button type="submit" className="w-full" disabled={pending}>
-          {pending ? 'Creando cuenta...' : 'Crear cuenta'}
-        </Button>
-      </form>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" name="email" type="email" autoComplete="email" required />
+            {state.fieldErrors?.email && (
+              <p className="text-destructive text-sm">{state.fieldErrors.email}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Teléfono</Label>
+            <Input id="phone" name="phone" type="tel" autoComplete="tel" required />
+            {state.fieldErrors?.phone && (
+              <p className="text-destructive text-sm">{state.fieldErrors.phone}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Contraseña</Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              required
+            />
+            {state.fieldErrors?.password && (
+              <p className="text-destructive text-sm">{state.fieldErrors.password}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              required
+            />
+            {state.fieldErrors?.confirmPassword && (
+              <p className="text-destructive text-sm">{state.fieldErrors.confirmPassword}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Checkbox id="terms" name="terms" required />
+              <Label htmlFor="terms" className="font-normal">
+                Acepto los términos y condiciones
+              </Label>
+            </div>
+            {state.fieldErrors?.terms && (
+              <p className="text-destructive text-sm">{state.fieldErrors.terms}</p>
+            )}
+          </div>
+
+          <Button type="submit" className="w-full" disabled={pending}>
+            {pending ? 'Creando cuenta...' : 'Crear cuenta'}
+          </Button>
+        </form>
+      )}
     </div>
   );
 }

@@ -1,9 +1,17 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import * as Sentry from '@sentry/nextjs';
 import { AuthError } from 'next-auth';
-import { signIn, InvalidLoginError, RateLimitedError, ROLE_HOME } from '@/lib/auth';
+import {
+  signIn,
+  InvalidLoginError,
+  RateLimitedError,
+  EmailNotVerifiedError,
+  ROLE_HOME,
+} from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { issueVerificationEmail } from '@/lib/verification-token';
 import { loginSchema } from './schema';
 
 function isSafeRedirect(url: string | null): url is string {
@@ -12,6 +20,8 @@ function isSafeRedirect(url: string | null): url is string {
 
 export type LoginState = {
   error?: string;
+  info?: string;
+  unverifiedEmail?: string;
   fieldErrors?: Partial<Record<'email' | 'password', string>>;
 };
 
@@ -41,6 +51,12 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
     if (error instanceof InvalidLoginError) {
       return { error: 'Email o contraseña incorrectos.' };
     }
+    if (error instanceof EmailNotVerifiedError) {
+      return {
+        error: 'Todavía no verificaste tu email.',
+        unverifiedEmail: email,
+      };
+    }
     if (error instanceof AuthError) {
       return { error: 'No se pudo iniciar sesión. Intentá de nuevo.' };
     }
@@ -52,4 +68,27 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
 
   const user = await prisma.user.findUnique({ where: { email }, select: { role: true } });
   redirect(ROLE_HOME[user!.role]);
+}
+
+export async function resendVerificationAction(
+  _prevState: LoginState,
+  formData: FormData,
+): Promise<LoginState> {
+  const email = formData.get('email');
+  if (typeof email !== 'string' || !email) {
+    return { error: 'Falta el email.' };
+  }
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (user && !user.emailVerified) {
+    try {
+      await issueVerificationEmail(email);
+    } catch (error) {
+      Sentry.captureException(error);
+    }
+  }
+
+  // Same message whether or not the account exists/is already verified, so
+  // this can't be used to probe which emails are registered.
+  return { info: 'Si tu cuenta existe y no está verificada, te reenviamos el email.' };
 }

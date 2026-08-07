@@ -16,6 +16,10 @@ export class RateLimitedError extends CredentialsSignin {
   code = 'rate-limited';
 }
 
+export class EmailNotVerifiedError extends CredentialsSignin {
+  code = 'email-not-verified';
+}
+
 export const ROLE_HOME: Record<Role, string> = {
   ADMIN: '/admin',
   STAFF: '/admin',
@@ -61,6 +65,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) throw new InvalidLoginError();
+
+        if (!user.emailVerified) throw new EmailNotVerifiedError();
 
         return user;
       },

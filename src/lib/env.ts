@@ -7,6 +7,7 @@ export const env = createEnv({
     REDIS_URL: z.url(),
     NEXTAUTH_URL: z.url(),
     NEXTAUTH_SECRET: z.string().min(1),
+    LOGIN_RATE_LIMIT: z.coerce.number().int().positive().default(3),
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   },
   client: {

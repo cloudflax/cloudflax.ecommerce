@@ -2,6 +2,7 @@ import NextAuth, { CredentialsSignin } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
+import { env } from '@/lib/env';
 import { prisma } from '@/lib/prisma';
 import { rateLimit } from '@/lib/rate-limit';
 
@@ -31,7 +32,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = credentials?.password as string | undefined;
         if (!email || !password) throw new InvalidLoginError();
 
-        const allowed = await rateLimit(`login:${email}`, 3, 60);
+        const allowed = await rateLimit(`login:${email}`, env.LOGIN_RATE_LIMIT, 60);
         if (!allowed) throw new RateLimitedError();
 
         const user = await prisma.user.findUnique({ where: { email } });

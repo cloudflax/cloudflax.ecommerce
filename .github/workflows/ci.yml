@@ -33,7 +33,7 @@ jobs:
         run: pnpm format:check
 
       - name: Type check
-        run: pnpm exec tsc --noEmit
+        run: pnpm typecheck
 
       - name: Unit tests
         run: pnpm test

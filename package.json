@@ -20,6 +20,7 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
+    "db:create-admin": "tsx scripts/create-admin.ts",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
     "prepare": "husky",
@@ -77,6 +78,7 @@
     "prisma": "^7.9.1",
     "storybook": "^10.5.7",
     "tailwindcss": "^4",
+    "tsx": "^4.23.9",
     "typescript": "^5",
     "vitest": "^4.1.10"
   },

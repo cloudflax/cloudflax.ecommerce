@@ -45,7 +45,7 @@ jobs:
       # flow specs (login, checkout) worth the browser-install + run time.
 
       - name: Cache Next.js build
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .next/cache
           key: ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx') }}

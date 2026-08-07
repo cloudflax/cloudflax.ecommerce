@@ -7,6 +7,7 @@ on:
 
 env:
   DATABASE_URL: 'postgresql://user:pass@localhost:5432/db?schema=public'
+  REDIS_URL: 'redis://localhost:6379'
   NEXTAUTH_SECRET: 'ci-placeholder-secret'
   NEXTAUTH_URL: 'http://localhost:3000'
 

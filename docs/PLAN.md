@@ -31,10 +31,13 @@ Convención de estado: `[ ]` pendiente · `[~]` en progreso · `[x]` listo
 - [x] Fix: excepción eslint `jsx-a11y/label-has-associated-control` para `src/components/ui/**` (primitivos shadcn, falso positivo)
 - Nota: `/account` todavía no existe (Fase 2) — el redirect post-registro a `/account` dará 404 hasta esa fase
 
-### Track B: Login UI
+### Track B: Login UI — completo (2026-08-07)
 
-- [ ] Página `/login` (UI — backend `authorize` ya existe en `src/lib/auth.ts`)
-- [ ] Manejo de errores visibles: credenciales inválidas vs rate-limit alcanzado (`rate-limit.ts` ya devuelve `null` en ambos casos — hay que distinguir el mensaje en la UI)
+- [x] Página `/login` (UI) — `src/app/login/page.tsx`
+- [x] Manejo de errores visibles: `src/lib/auth.ts` ahora tira `InvalidLoginError` / `RateLimitedError` (subclases de `CredentialsSignin`, cada una con su `code`) en vez de devolver `null` en ambos casos — `src/app/login/actions.ts` distingue el mensaje
+- [x] `pages.signIn: '/login'` en `auth.ts` — cualquier redirect de NextAuth cae en nuestra página, no en la default
+- Probado en navegador: credenciales inválidas, rate-limit al 6to intento, login válido (admin) redirige a `/`
+- Nota: redirect post-login es fijo a `/` por ahora — el redirect según `role` es tarea de Track C, no se adelantó acá
 
 ### Track C: Protección de rutas
 

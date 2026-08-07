@@ -21,6 +21,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:create-admin": "tsx scripts/create-admin.ts",
+    "db:seed-test-users": "tsx scripts/seed-test-users.ts",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
     "prepare": "husky",

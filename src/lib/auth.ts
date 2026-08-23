@@ -8,6 +8,7 @@ import { env } from '@/lib/env';
 import { prisma } from '@/lib/prisma';
 import { rateLimit } from '@/lib/rate-limit';
 import { redis } from '@/lib/redis';
+import { resolveUserRole } from '@/lib/session-role';
 
 export class InvalidLoginError extends CredentialsSignin {
   code = 'invalid-credentials';
@@ -43,16 +44,41 @@ export const ROLE_HOME: Record<Role, string> = {
   CUSTOMER: '/account',
 };
 
+// NextAuth's default session lifetime, made explicit so a dependency upgrade
+// can't silently change it. Role revocation is handled by the jwt callback
+// below (V7) — this bounds the absolute maximum a token lives.
+const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
-  session: { strategy: 'jwt' },
+  session: { strategy: 'jwt', maxAge: SESSION_MAX_AGE_SECONDS },
   trustHost: true,
   pages: {
     signIn: '/login',
   },
   callbacks: {
-    jwt({ token, user }) {
-      if (user) token.role = user.role;
+    async jwt({ token, user }) {
+      if (user) {
+        // Fresh sign-in: stamp the role and the last DB check.
+        token.role = user.role;
+        token.roleCheckedAt = Math.floor(Date.now() / 1000);
+        return token;
+      }
+
+      // Existing session: re-read the role at most every
+      // ROLE_REVALIDATE_SECONDS. Role changes (demotion, deletion) propagate
+      // with that latency instead of waiting out the token's maxAge.
+      const now = Math.floor(Date.now() / 1000);
+      const checkedAt = typeof token.roleCheckedAt === 'number' ? token.roleCheckedAt : 0;
+      if (now - checkedAt < env.ROLE_REVALIDATE_SECONDS) return token;
+
+      if (!token.sub) return null;
+
+      const role = await resolveUserRole(token.sub);
+      if (!role) return null; // account deleted — kill the session
+
+      token.role = role;
+      token.roleCheckedAt = now;
       return token;
     },
     session({ session, token }) {

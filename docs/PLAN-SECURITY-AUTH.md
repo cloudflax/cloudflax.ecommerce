@@ -1,6 +1,6 @@
 # Plan de trabajo — Hardening de seguridad del flujo de auth
 
-Última actualización: 2026-08-23 (Fases 1–3 completas)
+Última actualización: 2026-08-23 (Fases 1–4 completas)
 
 Alcance: vulnerabilidades y fallas encontradas en la auditoría del flujo `/login`, `/register`, `/verify-email` y la capa de sesión/roles. Continúa el trabajo de [PLAN.md](./PLAN.md) (Fases 0–3, completas). No incluye catálogo, checkout ni pagos.
 
@@ -107,18 +107,30 @@ Commit: `fix(auth): rate limit registration and verification resend, drop accoun
 
 ---
 
-## Fase 4 — Ciclo de vida de la sesión (V7)
+## Fase 4 — Ciclo de vida de la sesión (V7) — completo (2026-08-23)
 
 La fase con más superficie de cambio; por eso va después de las críticas.
 
 Problema: `token.role` se escribe una sola vez en el callback `jwt` y la sesión JWT no tiene `maxAge` explícito (default 30 días). Degradar un ADMIN a CUSTOMER, o borrar la cuenta, no tiene efecto: `proxy.ts` y `requireRole()` siguen leyendo el rol viejo del token hasta que expire.
 
-- [ ] `session: { strategy: 'jwt', maxAge: ... }` explícito en `src/lib/auth.ts`.
-- [ ] Revalidar el rol contra la DB en el callback `jwt`, con timestamp en el token para no pegarle a la DB en cada request.
-- [ ] Invalidar el token si el usuario ya no existe o quedó sin rol válido.
-- [ ] Cachear en Redis el rol leído de la DB, con TTL igual al intervalo de revalidación, para que la relectura no sea una query por request.
+- [x] `session: { strategy: 'jwt', maxAge: ... }` explícito en `src/lib/auth.ts` — 30 días, el default de NextAuth hecho explícito para que un upgrade no lo cambie silenciosamente.
+- [x] Revalidar el rol contra la DB en el callback `jwt`, con timestamp en el token para no pegarle a la DB en cada request — `token.roleCheckedAt`, intervalo `ROLE_REVALIDATE_SECONDS` (default 300s).
+- [x] Invalidar el token si el usuario ya no existe o quedó sin rol válido — `resolveUserRole` devuelve `null` y el callback `jwt` retorna `null`, lo que mata la sesión.
+- [x] Cachear en Redis el rol leído de la DB, con TTL igual al intervalo de revalidación, para que la relectura no sea una query por request.
 
-Verificación: unit del callback `jwt`; e2e de cambio de rol reflejado sin re-login.
+### Desvíos del plan original
+
+- **`ROLE_REVALIDATE_SECONDS` es env var nueva (triple registro), no constante hardcodeada.** La necesitaba el spec e2e: el webServer de Playwright la overrridea a 2s para no esperar 5 minutos reales en cada corrida.
+- **El test unit cubre `resolveUserRole` (`src/lib/session-role.test.ts`), no el callback `jwt` completo.** El callback vive dentro del handler de NextAuth y no es importable; la lógica de revalidación (cache válida → cache corrupta → DB → usuario borrado → Redis caído) quedó extraída a `src/lib/session-role.ts` y es la que se testea (6 casos).
+- **El spec e2e muta la DB con `pg` directo, no con PrismaClient.** El client generado es ESM con `import.meta` y el transformador de Playwright lo rechaza (`Cannot use 'import.meta' outside a module`).
+- **El e2e necesita que Playwright arranque el server.** Con un dev server ya corriendo (`reuseExistingServer`), el override de env no aplica y el spec falla. Nota en `playwright.config.ts`: parar `pnpm dev` antes de correr la suite.
+- **Redis caído en revalidación: fallback a DB, no fail-closed.** A diferencia del rate limit (decisión 2), acá no hay nada que proteger cerrando: la DB es la fuente de verdad. Cache write también best-effort.
+
+### Nota sobre el aviso de V6b en dev
+
+La cuenta de Resend testing solo acepta emails a la dirección propia, así que `sendAccountExistsNotice` devuelve 403 en dev (visible en el log del webServer e2e). El registro igual devuelve el mensaje neutral — el aviso real se verificará con dominio propio.
+
+Verificación: unit de `resolveUserRole` (6 casos); e2e `e2e/session-role.spec.ts` — login CUSTOMER, UPDATE a DELIVERY en la DB, `/account` rebota a `/delivery` sin re-login (con restauración del rol en `finally`). Suite completa: 6 specs pass.
 Commit: `fix(auth): bound session lifetime and revalidate role against the database`
 
 ---

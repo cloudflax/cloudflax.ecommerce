@@ -21,5 +21,10 @@ export default defineConfig({
     command: 'pnpm dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
+    // The session-role spec depends on a 2s role-revalidation interval. Only
+    // applies when Playwright starts the server itself — with an already
+    // running dev server (reuseExistingServer), the override is ignored and
+    // that spec will fail. Stop `pnpm dev` before running the suite locally.
+    env: { ...process.env, ROLE_REVALIDATE_SECONDS: '2' } as Record<string, string>,
   },
 });

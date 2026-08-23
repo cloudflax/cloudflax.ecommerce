@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cloudflax Ecommerce
+
+Ecommerce platform built with Next.js. Includes a customer storefront plus dedicated areas for admin, staff, and delivery roles, with authentication and role-based access control.
+
+## Tech Stack
+
+- **Next.js 16** (App Router) + React 19 + TypeScript
+- **Prisma 7** + PostgreSQL
+- **NextAuth v5** (credentials login, email verification via Resend)
+- **Redis** (caching, rate limiting)
+- **Tailwind CSS 4** + shadcn/ui
+- **Sentry** (error monitoring)
+- **Vitest** + Playwright + Storybook
+
+## Requirements
+
+- Node.js >= 24
+- pnpm 11
+- Docker (Postgres and Redis run via docker compose)
 
 ## Getting Started
 
-First, run the development server:
+1. Install dependencies:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+   ```bash
+   pnpm install
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Create your environment file:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+   ```bash
+   cp .env.example .env
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+   Set `NEXTAUTH_SECRET` (generate one with `openssl rand -base64 32`) and fill in `RESEND_API_KEY` and `NEXT_PUBLIC_SENTRY_DSN`.
 
-## Learn More
+3. Start the databases:
 
-To learn more about Next.js, take a look at the following resources:
+   ```bash
+   pnpm docker:up
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. Run the migration and seed:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   ```bash
+   pnpm db:migrate
+   pnpm db:seed
+   ```
 
-## Deploy on Vercel
+5. Start the dev server:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   ```bash
+   pnpm dev
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Open [http://localhost:3000](http://localhost:3000).
+
+## Scripts
+
+| Command           | Description                       |
+| ----------------- | --------------------------------- |
+| `pnpm dev`        | Start the development server      |
+| `pnpm build`      | Production build                  |
+| `pnpm lint`       | Run ESLint                        |
+| `pnpm typecheck`  | Type-check the project            |
+| `pnpm test`       | Run unit tests (Vitest)           |
+| `pnpm test:e2e`   | Run end-to-end tests (Playwright) |
+| `pnpm db:migrate` | Apply Prisma migrations           |
+| `pnpm db:seed`    | Seed the database                 |
+| `pnpm db:studio`  | Open Prisma Studio                |
+| `pnpm docker:up`  | Start Postgres and Redis          |
+| `pnpm storybook`  | Start Storybook on port 6006      |
+
+## Project Structure
+
+- `src/app` — routes (App Router)
+- `src/lib` — server-side utilities (Prisma client, auth, env, Redis)
+- `src/components/ui` — shadcn/ui components
+- `prisma/schema.prisma` — database schema
+- `e2e` — Playwright tests
+- `scripts` — seed and utility scripts
+
+## Conventions
+
+- Package manager: pnpm (pinned in `packageManager`)
+- Env vars: defined in `src/lib/env.ts` with zod validation — add new vars there, in `.env.example`, and in the CI workflow
+- Commits: Conventional Commits, enforced by commitlint
+- Husky hooks: lint-staged on `pre-commit`, typecheck + unit tests on `pre-push`
+- Error reporting goes through Sentry only (`src/instrumentation.ts`)

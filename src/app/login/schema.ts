@@ -1,7 +1,8 @@
 import { z } from 'zod';
+import { emailSchema } from '@/lib/validation';
 
 export const loginSchema = z.object({
-  email: z.email('Email inválido'),
+  email: emailSchema,
   password: z.string().min(1, 'Contraseña requerida'),
 });
 

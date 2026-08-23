@@ -1,6 +1,6 @@
 # Plan de trabajo — Auth: Login, Registro y Dashboards por Rol
 
-Última actualización: 2026-08-07 (Fase 0 completa)
+Última actualización: 2026-08-08 (Fases 0–3 completas; Fase 4 planificada aparte)
 
 Alcance: sistema de autenticación, roles y acceso a dashboards. Catálogo, checkout, pagos, logística y notificaciones NO están en este plan — quedan como contexto (ver abajo) para cuando les toque su propio plan.
 
@@ -71,6 +71,10 @@ Convención de estado: `[ ]` pendiente · `[~]` en progreso · `[x]` listo
 - Bug encontrado y corregido en el camino: el SDK de Resend devuelve `{data, error}` en vez de tirar excepción — sin chequear `error` explícitamente, un envío fallido se veía idéntico a uno exitoso (fallaba en silencio)
 - Probado en navegador end-to-end: registro → login bloqueado → reenvío → `/verify-email` con token real → login exitoso → usuarios sembrados (ya verificados) sin regresión
 - Costo real en producción (Resend): plan Free cubre 3,000 emails/mes (tope 100/día) — alcanza sobrado solo para verificación. Si más adelante se suman notificaciones de pedidos, ahí sí escala a Pro ($20/mes, 50k emails)
+
+## Fase 4 — Hardening de seguridad — plan aparte
+
+Auditoría del flujo de auth (2026-08-08) encontró 12 hallazgos, 3 de severidad alta. Tienen su propio plan por fases: [PLAN-SECURITY-AUTH.md](./PLAN-SECURITY-AUTH.md)
 
 ---
 

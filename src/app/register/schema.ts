@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { emailSchema } from '@/lib/validation';
 
 export const registerSchema = z
   .object({
     name: z.string().min(1, 'Nombre requerido'),
-    email: z.email('Email inválido'),
+    email: emailSchema,
     phone: z.string().min(7, 'Teléfono inválido'),
     password: z
       .string()

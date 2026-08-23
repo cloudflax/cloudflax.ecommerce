@@ -12,11 +12,11 @@ import {
 } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { issueVerificationEmail } from '@/lib/verification-token';
+import { env } from '@/lib/env';
+import { getClientIp } from '@/lib/request-ip';
+import { rateLimit } from '@/lib/rate-limit';
+import { isSafeRedirect } from '@/lib/safe-redirect';
 import { loginSchema } from './schema';
-
-function isSafeRedirect(url: string | null): url is string {
-  return !!url && url.startsWith('/') && !url.startsWith('//');
-}
 
 export type LoginState = {
   error?: string;
@@ -24,6 +24,12 @@ export type LoginState = {
   unverifiedEmail?: string;
   fieldErrors?: Partial<Record<'email' | 'password', string>>;
 };
+
+function formatRetryAfter(seconds: number): string {
+  if (seconds < 60) return `${Math.max(1, seconds)} segundos`;
+  const minutes = Math.ceil(seconds / 60);
+  return minutes === 1 ? '1 minuto' : `${minutes} minutos`;
+}
 
 export async function loginAction(_prevState: LoginState, formData: FormData): Promise<LoginState> {
   const parsed = loginSchema.safeParse({
@@ -42,11 +48,23 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
 
   const { email, password } = parsed.data;
 
+  // V2a — per-IP limit in front of signIn: without it, `login:${email}` buckets
+  // do nothing against password spraying across many accounts.
+  const ip = await getClientIp();
+  const ipLimit = await rateLimit(`login:ip:${ip}`, env.LOGIN_IP_RATE_LIMIT, 60);
+  if (!ipLimit.allowed) {
+    return {
+      error: `Demasiados intentos desde tu red. Esperá ${formatRetryAfter(ipLimit.retryAfter)} antes de volver a intentar.`,
+    };
+  }
+
   try {
     await signIn('credentials', { email, password, redirect: false });
   } catch (error) {
     if (error instanceof RateLimitedError) {
-      return { error: 'Demasiados intentos. Esperá un minuto antes de volver a intentar.' };
+      return {
+        error: `Demasiados intentos. Esperá ${formatRetryAfter(error.retryAfter)} antes de volver a intentar.`,
+      };
     }
     if (error instanceof InvalidLoginError) {
       return { error: 'Email o contraseña incorrectos.' };

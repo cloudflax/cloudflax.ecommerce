@@ -1,6 +1,6 @@
 # Plan de trabajo — Hardening de seguridad del flujo de auth
 
-Última actualización: 2026-08-08 (Fase 0 completa)
+Última actualización: 2026-08-23 (Fase 1 completa)
 
 Alcance: vulnerabilidades y fallas encontradas en la auditoría del flujo `/login`, `/register`, `/verify-email` y la capa de sesión/roles. Continúa el trabajo de [PLAN.md](./PLAN.md) (Fases 0–3, completas). No incluye catálogo, checkout ni pagos.
 
@@ -46,19 +46,26 @@ Commit: `refactor(auth): add ip helper and rate-limit primitives`
 
 ---
 
-## Fase 1 — Crítico: open redirect, brute force, timing
+## Fase 1 — Crítico: open redirect, brute force, timing — completo (2026-08-23)
 
 Depende de Fase 0. Sin cambios de UI ni de schema.
 
-- [ ] **V1 — Open redirect en `callbackUrl`** (`src/app/login/actions.ts`)
+- [x] **V1 — Open redirect en `callbackUrl`** (`src/app/login/actions.ts`)
   - `isSafeRedirect` actual bloquea `//evil.com` pero deja pasar `/\evil.com`; los navegadores normalizan `\` a `/` (WHATWG URL), así que el `Location` sale a dominio externo.
   - Reescribir: rechazar backslash, control chars y whitespace, después resolver con `new URL(url, base)` y exigir mismo origen.
   - Test unitario `src/app/login/actions.test.ts` con la lista de vectores: `//e.com`, `/\e.com`, `/\/e.com`, `/%09/e.com`, `/%2F%2Fe.com`, `https://e.com`, `javascript:alert(1)`, y los casos válidos `/admin`, `/account?tab=1`.
-- [ ] **V2a — Password spraying** — rate limit por IP en `loginAction`, antes del `signIn`. Va en la action y no en `authorize()` porque ahí sí hay acceso a `headers()`.
-- [ ] **V2b — DoS de cuenta** — el contador por email de `auth.ts:60` bloquea una cuenta ajena con 3 intentos fallidos. Cambiar la ventana fija de 60s por backoff creciente (60s, 5min, 30min según cantidad de bloqueos consecutivos), y usar el `retryAfter` de Fase 0 para que el mensaje diga cuánto falta.
-- [ ] **V3 — Enumeración por timing** (`src/lib/auth.ts`) — cuando `!user?.password`, comparar contra un hash dummy constante en vez de retornar de una. Hoy el camino "email inexistente" cuesta ~0ms y el "email existente" ~100ms de bcrypt: diferencia medible.
+- [x] **V2a — Password spraying** — rate limit por IP en `loginAction`, antes del `signIn`. Va en la action y no en `authorize()` porque ahí sí hay acceso a `headers()`.
+- [x] **V2b — DoS de cuenta** — el contador por email de `auth.ts:60` bloquea una cuenta ajena con 3 intentos fallidos. Cambiar la ventana fija de 60s por backoff creciente (60s, 5min, 30min según cantidad de bloqueos consecutivos), y usar el `retryAfter` de Fase 0 para que el mensaje diga cuánto falta.
+- [x] **V3 — Enumeración por timing** (`src/lib/auth.ts`) — cuando `!user?.password`, comparar contra un hash dummy constante en vez de retornar de una. Hoy el camino "email inexistente" cuesta ~0ms y el "email existente" ~100ms de bcrypt: diferencia medible.
 
-Verificación: `pnpm test` (unit de `isSafeRedirect`) + spec e2e `e2e/login-security.spec.ts` que confirme el bloqueo tras N intentos y que `callbackUrl` hostil no salga del dominio.
+### Desvíos del plan original
+
+- **`isSafeRedirect` quedó en `src/lib/safe-redirect.ts`, no inline en `actions.ts`.** Importar `actions.ts` desde vitest arrastra `next-auth`, `prisma` y `@/lib/env` (que valida env vars al importar); el test unitario queda en `src/lib/safe-redirect.test.ts` en vez de `actions.test.ts`. Misma lista de vectores del plan.
+- **V2b implementado como lock escalonado, no como ventana del contador.** El contador de intentos (`login:${email}`, ventana 60s) sigue detectando el bloqueo; al dispararse, un streak (`login:locks:${email}`, TTL 24h) fija un lock (`login:lock:${email}`) de 60s → 5min → 30min según bloqueos consecutivos. Un login exitoso borra streak y lock. Ventaja: el bloqueo sobrevive a la expiración del contador de intentos, que era exactamente el bypass del esquema original.
+- **`e2e/global-setup.ts` limpia `login:*` antes de la suite.** Los specs cuentan intentos contra Redis; sobras de corridas anteriores los vuelven flaky (ej. el bucket por IP disparando temprano). Wire en `playwright.config.ts` (`globalSetup`).
+- **Dos detalles del spec e2e:** el lockout test usa email único por corrida (Redis queda con llaves de corridas viejas solo por el TTL); el selector del botón de submit es `button[type="submit"]`, no por nombre accesible — la label cambia a "Ingresando..." mientras la action está pendiente y rompe el locator.
+
+Verificación: `pnpm test` (30 pass, incluye 17 casos de `safe-redirect`), `pnpm test:e2e` (3 pass: bloqueo al 4to intento, `callbackUrl` hostil, home), `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build`. Smoke en Redis: streak creado con TTL 24h tras el primer bloqueo; lock de 60s aplicado.
 Commit: `fix(auth): close open redirect, add ip rate limit and constant-time login`
 
 ---

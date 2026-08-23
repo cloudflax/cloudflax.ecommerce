@@ -75,7 +75,10 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
             <Field className="gap-3" data-invalid={!!state.fieldErrors?.password}>
               <div className="flex items-center">
                 <FieldLabel htmlFor="password">Contraseña</FieldLabel>
-                <Link href="#" className="ml-auto text-sm underline-offset-4 hover:underline">
+                <Link
+                  href="/forgot-password"
+                  className="ml-auto text-sm underline-offset-4 hover:underline"
+                >
                   Olvidaste tu contraseña?
                 </Link>
               </div>

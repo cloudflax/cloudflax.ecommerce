@@ -29,6 +29,17 @@ export async function sendAccountExistsNotice(to: string) {
   });
 }
 
+export async function sendPasswordResetEmail(to: string, token: string) {
+  const resetUrl = new URL('/reset-password', env.NEXTAUTH_URL);
+  resetUrl.searchParams.set('token', token);
+
+  await send({
+    to,
+    subject: 'Restablecé tu contraseña',
+    html: `<p>Pediste restablecer tu contraseña. Hacé clic en el siguiente link:</p><p><a href="${resetUrl.toString()}">${resetUrl.toString()}</a></p><p>Este link vence en 1 hora. Si no pediste el cambio, ignorá este email.</p>`,
+  });
+}
+
 async function send({ to, subject, html }: { to: string; subject: string; html: string }) {
   // resend.emails.send() returns { data, error } instead of throwing —
   // without this check a failed send looks identical to a successful one.

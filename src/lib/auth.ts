@@ -59,9 +59,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        // Fresh sign-in: stamp the role and the last DB check.
+        // Fresh sign-in: stamp the role, the password-version stamp, and the
+        // last DB check. passwordChangedAt isn't on the next-auth User type —
+        // cast at the read site, same as the role reads below.
         token.role = user.role;
         token.roleCheckedAt = Math.floor(Date.now() / 1000);
+        const changedAt = (user as { passwordChangedAt?: Date | null }).passwordChangedAt;
+        token.passwordChangedAt = changedAt ? Math.floor(changedAt.getTime() / 1000) : null;
         return token;
       }
 
@@ -76,6 +80,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       const role = await resolveUserRole(token.sub);
       if (!role) return null; // account deleted — kill the session
+
+      // V12 — a password reset must log out every other device. Like the role,
+      // this propagates within ROLE_REVALIDATE_SECONDS. Deliberately not
+      // cached in Redis: a stale stamp would extend a stolen session up to
+      // the token's maxAge.
+      const userRecord = await prisma.user.findUnique({
+        where: { id: token.sub },
+        select: { passwordChangedAt: true },
+      });
+      if (!userRecord) return null;
+      const changedAt = userRecord.passwordChangedAt
+        ? Math.floor(userRecord.passwordChangedAt.getTime() / 1000)
+        : null;
+      if (changedAt !== (token.passwordChangedAt ?? null)) return null;
 
       token.role = role;
       token.roleCheckedAt = now;

@@ -7,7 +7,7 @@ import { LoginForm } from './login-form';
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ callbackUrl?: string }>;
+  searchParams: Promise<{ callbackUrl?: string; reset?: string }>;
 }) {
   const session = await auth();
   const home = session?.user ? ROLE_HOME[session.user.role] : undefined;
@@ -17,7 +17,7 @@ export default async function LoginPage({
   // the form — redirecting to undefined is worse than showing the login.
   if (home) redirect(home);
 
-  const { callbackUrl } = await searchParams;
+  const { callbackUrl, reset } = await searchParams;
 
   return (
     <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
@@ -30,6 +30,12 @@ export default async function LoginPage({
         </Link>
 
         <div className="flex flex-col gap-6">
+          {reset === '1' && (
+            <FieldDescription className="px-6 text-center">
+              Contraseña actualizada. Ingresá con tu nueva contraseña.
+            </FieldDescription>
+          )}
+
           <LoginForm callbackUrl={callbackUrl} />
 
           <FieldDescription className="px-6 text-center">

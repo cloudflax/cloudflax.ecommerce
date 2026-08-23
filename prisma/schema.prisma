@@ -29,6 +29,9 @@ model User {
   emailVerified   DateTime?
   image           String?
   password        String?
+  // Set on every password reset — the jwt callback compares it against the
+  // session token's stamp and kills sessions that predate the change.
+  passwordChangedAt DateTime?
   role            Role      @default(CUSTOMER)
   phone           String?
   termsAcceptedAt DateTime?
@@ -70,4 +73,16 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// Password-reset links. Stores a sha256 hash of the token that goes in the
+// email (unlike VerificationToken, whose plain token never grants write
+// access): a DB leak must not hand out tokens that reset passwords.
+model PasswordResetToken {
+  identifier String   // email
+  tokenHash  String   @unique
+  expires    DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([identifier])
 }

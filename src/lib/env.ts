@@ -11,6 +11,7 @@ export const env = createEnv({
     LOGIN_IP_RATE_LIMIT: z.coerce.number().int().positive().default(20),
     REGISTER_RATE_LIMIT: z.coerce.number().int().positive().default(5),
     RESEND_RATE_LIMIT: z.coerce.number().int().positive().default(1),
+    PASSWORD_RESET_RATE_LIMIT: z.coerce.number().int().positive().default(3),
     ROLE_REVALIDATE_SECONDS: z.coerce.number().int().positive().default(300),
     TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).default(1),
     RESEND_API_KEY: z.string().min(1),

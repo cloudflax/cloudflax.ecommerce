@@ -1,6 +1,6 @@
 # Plan de trabajo — Hardening de seguridad del flujo de auth
 
-Última actualización: 2026-08-23 (Fase 1 completa)
+Última actualización: 2026-08-23 (Fases 1–2 completas)
 
 Alcance: vulnerabilidades y fallas encontradas en la auditoría del flujo `/login`, `/register`, `/verify-email` y la capa de sesión/roles. Continúa el trabajo de [PLAN.md](./PLAN.md) (Fases 0–3, completas). No incluye catálogo, checkout ni pagos.
 
@@ -70,18 +70,18 @@ Commit: `fix(auth): close open redirect, add ip rate limit and constant-time log
 
 ---
 
-## Fase 2 — Login con sesión activa (V4)
+## Fase 2 — Login con sesión activa (V4) — completo (2026-08-23)
 
 Independiente de Fase 1, se puede hacer en paralelo. Es el hallazgo que disparó la auditoría.
 
 Riesgo real: permite sobrescribir sesión. Con la sesión de un ADMIN abierta, cualquiera con acceso momentáneo al equipo loguea otra cuenta encima sin pasar por logout y el JWT anterior se reemplaza sin dejar rastro.
 
-- [ ] `src/app/login/page.tsx` pasa a server component: llama `auth()` y, si hay sesión, `redirect(ROLE_HOME[session.user.role])`.
-- [ ] Mover el formulario a `src/app/login/login-form.tsx` con `'use client'`, recibiendo `callbackUrl` por prop en vez de leer `searchParams` con `use()`.
-- [ ] Caso borde: sesión presente pero rol sin entrada en `ROLE_HOME` (el mismo que ya contempla `src/proxy.ts:20`) — mostrar el login, no redirigir a `undefined`.
-- [ ] Mismo tratamiento en `/register`: con sesión activa no tiene sentido mostrar el alta.
+- [x] `src/app/login/page.tsx` pasa a server component: llama `auth()` y, si hay sesión, `redirect(ROLE_HOME[session.user.role])`.
+- [x] Mover el formulario a `src/app/login/login-form.tsx` con `'use client'`, recibiendo `callbackUrl` por prop en vez de leer `searchParams` con `use()`.
+- [x] Caso borde: sesión presente pero rol sin entrada en `ROLE_HOME` (el mismo que ya contempla `src/proxy.ts:20`) — mostrar el login, no redirigir a `undefined`.
+- [x] Mismo tratamiento en `/register`: con sesión activa no tiene sentido mostrar el alta.
 
-Verificación: spec e2e — login, navegar de nuevo a `/login`, esperar redirect al home del rol.
+Verificación: spec e2e `e2e/session-redirect.spec.ts` — login, navegar de nuevo a `/login` y a `/register`, ambos redirigen a `/account`. Suite completa: 4 specs pass.
 Commit: `fix(auth): redirect authenticated users away from login and register`
 
 ---

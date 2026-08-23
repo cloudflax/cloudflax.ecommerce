@@ -20,7 +20,19 @@ function cspHeaderValue(nonce: string): string {
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
-    `style-src 'self' 'nonce-${nonce}'`,
+    // Dev only: Turbopack, the Next dev tools overlay, and React itself apply
+    // styles through client-side <style> tags and style attributes that Next
+    // never stamps with the nonce. Note a nonce in style-src makes the browser
+    // ignore 'unsafe-inline', so dev drops the nonce entirely (Next never
+    // nonces styles anyway). Production still ships real .css files from
+    // 'self', so the nonce-only policy stays strict there.
+    `${isDev ? "style-src 'self' 'unsafe-inline'" : `style-src 'self' 'nonce-${nonce}'`}`,
+    // Sentry browser SDK posts envelopes to the ingest endpoint; without this
+    // connect-src entry the requests fall back to default-src 'self' and every
+    // client-side Sentry event is dropped. The DSN host is
+    // *.ingest.us.sentry.io (US region) — a '*.ingest.sentry.io' wildcard does
+    // NOT match it, since CSP wildcards cover exactly one label.
+    "connect-src 'self' https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
     "img-src 'self' blob: data:",
     "font-src 'self'",
     "object-src 'none'",

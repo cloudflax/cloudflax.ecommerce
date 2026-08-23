@@ -1,6 +1,6 @@
 # Plan de trabajo — Hardening de seguridad del flujo de auth
 
-Última actualización: 2026-08-23 (Fases 1–5 completas)
+Última actualización: 2026-08-23 (Fases 1–6 completas — hardening cerrado)
 
 Alcance: vulnerabilidades y fallas encontradas en la auditoría del flujo `/login`, `/register`, `/verify-email` y la capa de sesión/roles. Continúa el trabajo de [PLAN.md](./PLAN.md) (Fases 0–3, completas). No incluye catálogo, checkout ni pagos.
 
@@ -154,10 +154,14 @@ Commit: `fix(auth): harden verification flow and add security headers`
 
 ---
 
-## Fase 6 — Cierre
+## Fase 6 — Cierre — completo (2026-08-23)
 
-- [ ] Wire de `pnpm test:e2e` en `.github/workflows/ci.yml` — el comentario del workflow dice que se conecte "una vez que haya specs de flujo reales"; las Fases 1–3 los agregan, así que acá se cumple la condición.
-- [ ] Marcar Fase 4 en `docs/PLAN.md` apuntando a este documento.
+- [x] Wire de `pnpm test:e2e` en `.github/workflows/ci.yml` — el comentario del workflow dice que se conecte "una vez que haya specs de flujo reales"; las Fases 1–3 los agregan, así que acá se cumple la condición.
+- [x] Marcar Fase 4 en `docs/PLAN.md` apuntando a este documento (hecho junto con el commit de Fase 0 — la sección "Fase 4 — Hardening de seguridad — plan aparte" ya existe ahí).
+
+### Desvíos del plan original
+
+- **Servicios de CI agregados**: el job ahora levanta `postgres:16-alpine` y `redis:7-alpine` como services, corre `prisma migrate deploy` + `scripts/seed.ts` (el guard de seed solo bloquea `NODE_ENV=production`, en CI el default es development) e instala Chromium con `playwright install --with-deps chromium`. Playwright arranca su propio dev server con `ROLE_REVALIDATE_SECONDS=2`, así que el spec de roles no espera 5 minutos reales en CI.
 
 Commit: `ci: run e2e suite`
 

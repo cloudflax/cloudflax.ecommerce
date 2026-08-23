@@ -23,6 +23,22 @@ env:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: pass
+          POSTGRES_DB: db
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U user"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
     steps:
       - uses: actions/checkout@v4
 
@@ -48,10 +64,6 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
-      # e2e (pnpm test:e2e) intentionally not run here yet: the only spec
-      # checks that the home page loads. Wire it in once there are real
-      # flow specs (login, checkout) worth the browser-install + run time.
-
       - name: Cache Next.js build
         uses: actions/cache@v4
         with:
@@ -62,3 +74,18 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # e2e — the security suite has real login flows (rate limiting, session
+      # redirects, role revalidation). Playwright starts its own dev server
+      # (see playwright.config.ts), which also overrides
+      # ROLE_REVALIDATE_SECONDS to keep the role-refresh spec fast.
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Setup database
+        run: |
+          pnpm exec prisma migrate deploy
+          pnpm tsx scripts/seed.ts
+
+      - name: E2E tests
+        run: pnpm test:e2e

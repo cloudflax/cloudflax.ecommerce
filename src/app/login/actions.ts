@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import * as Sentry from '@sentry/nextjs';
 import { AuthError } from 'next-auth';
 import {
+  auth,
   signIn,
   InvalidLoginError,
   RateLimitedError,
@@ -78,8 +79,12 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
   const callbackUrl = formData.get('callbackUrl') as string | null;
   if (isSafeRedirect(callbackUrl)) redirect(callbackUrl);
 
-  const user = await prisma.user.findUnique({ where: { email }, select: { role: true } });
-  redirect(ROLE_HOME[user!.role]);
+  // V9 — the role lives in the JWT signIn just issued; re-querying it here
+  // only adds a race where the account is deleted between signIn and the
+  // query (user!.role → 500).
+  const session = await auth();
+  const home = session?.user ? ROLE_HOME[session.user.role] : undefined;
+  redirect(home ?? '/login');
 }
 
 export async function resendVerificationAction(

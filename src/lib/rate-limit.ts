@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import { redis } from '@/lib/redis';
 
 export type RateLimitBucket = {
@@ -29,38 +30,45 @@ function readNumber(reply: [Error | null, unknown] | undefined): number {
  * docs/PLAN-SECURITY-AUTH.md, decision 2).
  */
 export async function rateLimitMany(buckets: RateLimitBucket[]): Promise<RateLimitResult> {
-  if (buckets.length === 0) return { allowed: true, retryAfter: 0 };
+  try {
+    if (buckets.length === 0) return { allowed: true, retryAfter: 0 };
 
-  const counters = redis.pipeline();
-  for (const { key } of buckets) {
-    counters.incr(key);
-    counters.ttl(key);
-  }
-  const replies = await counters.exec();
-  if (!replies) throw new Error('Redis pipeline was aborted');
-
-  const expirations = redis.pipeline();
-  let allowed = true;
-  let retryAfter = 0;
-
-  buckets.forEach((bucket, index) => {
-    const count = readNumber(replies[index * 2]);
-    const ttl = readNumber(replies[index * 2 + 1]);
-
-    // -1 means the key exists with no TTL: either we just created it with INCR,
-    // or a previous EXPIRE never landed. Without this the counter would stay
-    // above the limit forever and lock the bucket permanently.
-    if (ttl < 0) expirations.expire(bucket.key, bucket.windowSeconds);
-
-    if (count > bucket.limit) {
-      allowed = false;
-      retryAfter = Math.max(retryAfter, ttl > 0 ? ttl : bucket.windowSeconds);
+    const counters = redis.pipeline();
+    for (const { key } of buckets) {
+      counters.incr(key);
+      counters.ttl(key);
     }
-  });
+    const replies = await counters.exec();
+    if (!replies) throw new Error('Redis pipeline was aborted');
 
-  if (expirations.length > 0) await expirations.exec();
+    const expirations = redis.pipeline();
+    let allowed = true;
+    let retryAfter = 0;
 
-  return { allowed, retryAfter };
+    buckets.forEach((bucket, index) => {
+      const count = readNumber(replies[index * 2]);
+      const ttl = readNumber(replies[index * 2 + 1]);
+
+      // -1 means the key exists with no TTL: either we just created it with INCR,
+      // or a previous EXPIRE never landed. Without this the counter would stay
+      // above the limit forever and lock the bucket permanently.
+      if (ttl < 0) expirations.expire(bucket.key, bucket.windowSeconds);
+
+      if (count > bucket.limit) {
+        allowed = false;
+        retryAfter = Math.max(retryAfter, ttl > 0 ? ttl : bucket.windowSeconds);
+      }
+    });
+
+    if (expirations.length > 0) await expirations.exec();
+
+    return { allowed, retryAfter };
+  } catch (error) {
+    // V11 — Redis down means nobody can log in (fail-closed, by decision 2).
+    // Make sure ops hears about it through Sentry instead of user reports.
+    Sentry.captureException(error);
+    throw error;
+  }
 }
 
 export function rateLimit(

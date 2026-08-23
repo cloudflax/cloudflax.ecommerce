@@ -1,6 +1,6 @@
 # Plan de trabajo — Hardening de seguridad del flujo de auth
 
-Última actualización: 2026-08-23 (Fases 1–4 completas)
+Última actualización: 2026-08-23 (Fases 1–5 completas)
 
 Alcance: vulnerabilidades y fallas encontradas en la auditoría del flujo `/login`, `/register`, `/verify-email` y la capa de sesión/roles. Continúa el trabajo de [PLAN.md](./PLAN.md) (Fases 0–3, completas). No incluye catálogo, checkout ni pagos.
 
@@ -135,15 +135,21 @@ Commit: `fix(auth): bound session lifetime and revalidate role against the datab
 
 ---
 
-## Fase 5 — Robustez y hardening
+## Fase 5 — Robustez y hardening — completo (2026-08-23)
 
-- [ ] **V9** — sacar el `user!.role` y la query redundante de `src/app/login/actions.ts:69-70`: si la cuenta se borra entre el `signIn` y el query, es un 500. El rol ya viene en el JWT recién emitido.
-- [ ] **V10a** — `src/app/verify-email/page.tsx` muta estado en un GET: los escáneres de links de Outlook/Gmail consumen el token al prefetchear y el usuario después ve "Link inválido". Pasar la mutación a POST con botón de confirmación.
-- [ ] **V10b** — mismo archivo: `prisma.user.update` tira P2025 sin catch si el usuario fue borrado tras emitirse el token. Envolver.
-- [ ] **V11** — `src/lib/rate-limit.ts` falla cerrado hacia todos: Redis caído significa que nadie puede loguear. No es un bypass, pero es un SPOF del login. Se mantiene fail-closed por decisión; agregar `Sentry.captureException` en el catch para que la caída se detecte por alerta y no por reportes de usuarios.
-- [ ] **V12** — headers en `next.config.ts`: CSP, `frame-ancestors 'none'`, HSTS, `Referrer-Policy`. Hoy `/login` es clickjackeable.
+- [x] **V9** — sacar el `user!.role` y la query redundante de `src/app/login/actions.ts:69-70`: si la cuenta se borra entre el `signIn` y el query, es un 500. El rol ya viene en el JWT recién emitido.
+- [x] **V10a** — `src/app/verify-email/page.tsx` muta estado en un GET: los escáneres de links de Outlook/Gmail consumen el token al prefetchear y el usuario después ve "Link inválido". Pasar la mutación a POST con botón de confirmación.
+- [x] **V10b** — mismo archivo: `prisma.user.update` tira P2025 sin catch si el usuario fue borrado tras emitirse el token. Envolver.
+- [x] **V11** — `src/lib/rate-limit.ts` falla cerrado hacia todos: Redis caído significa que nadie puede loguear. No es un bypass, pero es un SPOF del login. Se mantiene fail-closed por decisión; agregar `Sentry.captureException` en el catch para que la caída se detecte por alerta y no por reportes de usuarios.
+- [x] **V12** — headers en `next.config.ts`: CSP, `frame-ancestors 'none'`, HSTS, `Referrer-Policy`. Hoy `/login` es clickjackeable.
 
-Verificación: `pnpm build` + suite e2e completa + inspección de headers en la respuesta.
+### Desvíos del plan original
+
+- **V10a como form POST + server action con redirect**, no endpoint POST: el form vive en el server component (`<form action={verifyEmailAction}>`, funciona sin JS por progressive enhancement); el resultado se muestra en dos páginas estáticas nuevas (`/verify-email/confirmed`, `/verify-email/expired`).
+- **V12 en dos capas.** La CSP necesita nonce por request y Next solo inyecta nonces en rendering dinámico, así que va en `src/proxy.ts` (patrón del guide CSP de Next, matcher ampliado a `/login`, `/register`, `/verify-email/:path*` además de los dashboards). Los headers que no dependen de nonce (HSTS, `Referrer-Policy`, `X-Frame-Options`, `X-Content-Type-Options`) van en `next.config.ts` `headers()` — esos aplican también a páginas estáticas que nunca pasan por el proxy. `frame-ancestors 'none'` en CSP + `X-Frame-Options: DENY` (defensa en profundidad).
+- **El spec e2e de Fase 4 cambió de `cliente.test` a `repartidor.test`.** Con `fullyParallel` los specs comparten el seed: la democión en una corrida de session-role le cambiaba el home a session-redirect en el medio del login. Cada spec que muta la DB usa ahora su propio seed user.
+
+Verificación: `pnpm build` + suite e2e completa (6 pass con CSP activa) + inspección de headers en la respuesta de `/login`: CSP con nonce, `X-Frame-Options: DENY`, HSTS, `Referrer-Policy`, `X-Content-Type-Options` presentes.
 Commit: `fix(auth): harden verification flow and add security headers`
 
 ---

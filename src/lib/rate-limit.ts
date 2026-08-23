@@ -70,3 +70,10 @@ export function rateLimit(
 ): Promise<RateLimitResult> {
   return rateLimitMany([{ key, limit, windowSeconds }]);
 }
+
+/** User-facing wait text for a RateLimitResult.retryAfter. */
+export function formatRetryAfter(seconds: number): string {
+  if (seconds < 60) return `${Math.max(1, seconds)} segundos`;
+  const minutes = Math.ceil(seconds / 60);
+  return minutes === 1 ? '1 minuto' : `${minutes} minutos`;
+}

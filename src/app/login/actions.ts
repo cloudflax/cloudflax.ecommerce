@@ -14,7 +14,7 @@ import { prisma } from '@/lib/prisma';
 import { issueVerificationEmail } from '@/lib/verification-token';
 import { env } from '@/lib/env';
 import { getClientIp } from '@/lib/request-ip';
-import { rateLimit } from '@/lib/rate-limit';
+import { formatRetryAfter, rateLimit, rateLimitMany } from '@/lib/rate-limit';
 import { isSafeRedirect } from '@/lib/safe-redirect';
 import { loginSchema } from './schema';
 
@@ -24,12 +24,6 @@ export type LoginState = {
   unverifiedEmail?: string;
   fieldErrors?: Partial<Record<'email' | 'password', string>>;
 };
-
-function formatRetryAfter(seconds: number): string {
-  if (seconds < 60) return `${Math.max(1, seconds)} segundos`;
-  const minutes = Math.ceil(seconds / 60);
-  return minutes === 1 ? '1 minuto' : `${minutes} minutos`;
-}
 
 export async function loginAction(_prevState: LoginState, formData: FormData): Promise<LoginState> {
   const parsed = loginSchema.safeParse({
@@ -95,6 +89,21 @@ export async function resendVerificationAction(
   const email = formData.get('email');
   if (typeof email !== 'string' || !email) {
     return { error: 'Falta el email.' };
+  }
+
+  // V5 — no auth, no token required: in a loop this floods the victim's inbox
+  // and burns the Resend quota. Both buckets always count (rateLimitMany
+  // keeps them in sync), so an attacker can't reset the IP counter by
+  // targeting a fresh email each time.
+  const ip = await getClientIp();
+  const { allowed, retryAfter } = await rateLimitMany([
+    { key: `resend:${email}`, limit: env.RESEND_RATE_LIMIT, windowSeconds: 5 * 60 },
+    { key: `resend:ip:${ip}`, limit: env.RESEND_RATE_LIMIT, windowSeconds: 5 * 60 },
+  ]);
+  if (!allowed) {
+    return {
+      error: `Ya enviamos un email recientemente. Esperá ${formatRetryAfter(retryAfter)} antes de pedir otro.`,
+    };
   }
 
   const user = await prisma.user.findUnique({ where: { email } });

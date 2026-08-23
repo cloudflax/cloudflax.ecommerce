@@ -1,6 +1,6 @@
 # Plan de trabajo — Hardening de seguridad del flujo de auth
 
-Última actualización: 2026-08-23 (Fases 1–2 completas)
+Última actualización: 2026-08-23 (Fases 1–3 completas)
 
 Alcance: vulnerabilidades y fallas encontradas en la auditoría del flujo `/login`, `/register`, `/verify-email` y la capa de sesión/roles. Continúa el trabajo de [PLAN.md](./PLAN.md) (Fases 0–3, completas). No incluye catálogo, checkout ni pagos.
 
@@ -86,16 +86,23 @@ Commit: `fix(auth): redirect authenticated users away from login and register`
 
 ---
 
-## Fase 3 — Abuso de email y enumeración de cuentas
+## Fase 3 — Abuso de email y enumeración de cuentas — completo (2026-08-23)
 
 Depende de Fase 0.
 
-- [ ] **V5 — `resendVerificationAction` sin límite** (`src/app/login/actions.ts`) — no pide auth ni token, así que en loop bombardea el inbox de la víctima y quema la cuota de Resend (plan Free: 100 emails/día). Rate limit por email y por IP.
-- [ ] **V6a — `registerAction` sin límite** — rate limit por IP; sin esto se crean cuentas en masa, cada una disparando su email de verificación.
-- [ ] **V6b — Enumeración explícita en registro** — `'Ya existe una cuenta con este email'` confirma directamente qué emails están registrados, sin necesidad de trucos de timing. Reemplazar por el mismo mensaje neutral del alta exitosa, y al email ya registrado mandarle un aviso de "alguien intentó registrarse con tu dirección" en lugar de crear nada.
+- [x] **V5 — `resendVerificationAction` sin límite** (`src/app/login/actions.ts`) — no pide auth ni token, así que en loop bombardea el inbox de la víctima y quema la cuota de Resend (plan Free: 100 emails/día). Rate limit por email y por IP.
+- [x] **V6a — `registerAction` sin límite** — rate limit por IP; sin esto se crean cuentas en masa, cada una disparando su email de verificación.
+- [x] **V6b — Enumeración explícita en registro** — `'Ya existe una cuenta con este email'` confirma directamente qué emails están registrados, sin necesidad de trucos de timing. Reemplazar por el mismo mensaje neutral del alta exitosa, y al email ya registrado mandarle un aviso de "alguien intentó registrarse con tu dirección" en lugar de crear nada.
   - Costo de UX aceptado: quien ya tenía cuenta y se olvidó no ve el error en pantalla, se entera por el aviso.
 
-Verificación: spec e2e comparando que email registrado y email nuevo devuelvan texto idéntico.
+### Desvíos del plan original
+
+- **`formatRetryAfter` se movió a `src/lib/rate-limit.ts`.** Con V5 ya eran tres call sites (login, resend, register) y dos copias del helper; exportado desde la lib y reutilizado.
+- **V5 usa `rateLimitMany` (email + IP en un pipeline)** — exactamente el caso para el que se construyó en Fase 0: ambos buckets cuentan siempre, el atacante no resetea el contador de IP apuntando a un email nuevo. Ambos buckets usan `RESEND_RATE_LIMIT` (ventana 5min); no se agregó env var nueva para el límite por IP.
+- **V6b manda el aviso con `sendAccountExistsNotice()` en `src/lib/email.ts`**, no reutiliza el email de verificación (no crea ni invalida tokens). El spec e2e deja una fila throwaway por corrida en la DB dev y manda un aviso real a `cliente.test@resend.dev` — efecto secundario conocido y aceptado en dev.
+- **El e2e de registro usa `Password1!`** — `registerSchema` exige mayúscula + número + símbolo; el primer intento con `password` fallaba validación y nunca llegaba al flujo.
+
+Verificación: spec e2e `e2e/register-enumeration.spec.ts` — email registrado y email nuevo devuelven exactamente el mismo texto. Suite completa: 5 specs pass.
 Commit: `fix(auth): rate limit registration and verification resend, drop account enumeration`
 
 ---
